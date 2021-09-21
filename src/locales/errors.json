@@ -1,0 +1,10 @@
+{
+  "errors": {
+    "Server": {
+      "serverIsNotRunning": "[server]=> server is not running!"
+    },
+    "ManagerOfEvents": {
+      "instanceError": "[ManagerOfEvents]=> Error with instance, please verify if the class is suministred"
+    }
+  }
+}
