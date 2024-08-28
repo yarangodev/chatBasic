@@ -1,40 +1,74 @@
 const socket = io();
 
-// DOM Elements!
+// DOM Elements
 const message = document.getElementById('message');
 const username = document.getElementById('username');
 const actions = document.getElementById('actions');
 const buttonSendMessage = document.getElementById('send');
 const output = document.getElementById('output');
+const fileInput = document.getElementById('file-input');
 
-buttonSendMessage.addEventListener('click', (event) => {
+let selectedFile = null;
+
+fileInput.addEventListener('change', (event) => {
+    selectedFile = event.target.files[0];
+});
+
+buttonSendMessage.addEventListener('click', sendMessage);
+message.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') {
+        sendMessage();
+    } else {
+        username.value ? socket.emit('chat:typing', username.value) : alert('¡Ingresa tu nombre!');
+    }
+});
+
+function sendMessage() {
     let chatMessage = message.value;
     let chatUserName = username.value;
     try {
         if (chatMessage && chatUserName) {
-            socket.emit('chat:message', {
-                chatUserName,
-                chatMessage,
-                socketId: socket.id
-            });
-            return message.value = ``;
+            if (selectedFile) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    socket.emit('chat:message', {
+                        chatUserName,
+                        chatMessage,
+                        image: event.target.result,
+                        socketId: socket.id
+                    });
+                };
+                reader.readAsDataURL(selectedFile);
+            } else {
+                socket.emit('chat:message', {
+                    chatUserName,
+                    chatMessage,
+                    socketId: socket.id
+                });
+            }
+            message.value = '';
+            selectedFile = null;
+            fileInput.value = '';
+        } else {
+            alert('¡Los campos son obligatorios!');
         }
-        return alert('Los campos son obligatorios!');
     } catch (error) {
-        return alert(`Error emitiendo el socket id: ${socket.id}:::` + error);
+        alert(`Error emitiendo el socket id: ${socket.id}:::` + error);
     }
-});
-
-message.addEventListener('keypress', (event) => {
-    username.value ? socket.emit('chat:typing', username.value) : alert('ingresa tu nombre!');
-});
+}
 
 socket.on('chat:message:server', (data) => {
-    output.innerHTML +=
-        `<p><strong>${data.chatUserName}</strong>: ${data.chatMessage}</p>`;
-    actions.innerHTML = ``;
+    actions.innerHTML = '';
+    let messageHTML = `
+        <div class="message">
+            <strong>${data.chatUserName}</strong>: ${data.chatMessage}
+            ${data.image ? `<img src="${data.image}" alt="Imagen compartida" class="shared-image">` : ''}
+        </div>
+    `;
+    output.innerHTML += messageHTML;
+    output.scrollTop = output.scrollHeight;
 });
 
 socket.on('chat:typing:server', (username) => {
-    actions.innerHTML = `<p><em>${username} is typing a message... </em></p>`
+    actions.innerHTML = `<p><em>${username} está escribiendo un mensaje...</em></p>`;
 });
